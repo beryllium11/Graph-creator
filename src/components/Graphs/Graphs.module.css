@@ -1,0 +1,6 @@
+.modal.fade {display: none;}
+#modalForLink .modalDialog {top: 10vh;}
+.modal.fade.show {display: block; opacity: 1;}
+.modalBackdrop {display: none;}
+.modalBackdrop.show {display: block; opacity: 0.35;}
+
