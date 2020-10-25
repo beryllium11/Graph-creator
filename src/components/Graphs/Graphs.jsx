@@ -1,4 +1,4 @@
-import React, {useState} from "react";
+import React, {useEffect, useState} from "react";
 import s from './Graphs.module.css';
 import { Graph } from 'react-d3-graph';
 import ReactDOM from "react-dom";
@@ -6,14 +6,25 @@ import Button from "react-bootstrap/Button";
 import Modal from "react-bootstrap/Modal";
 import InputGroup from "react-bootstrap/InputGroup";
 import FormControl from "react-bootstrap/FormControl";
-import $ from "jquery";
 
 
 const Graphs = (props) => {
 
     const [showNodes, setShowNodes ] = useState(false);
+    const [idContainer, setIdContainer] = useState(0);
+    const [nodeLabel, setNodeLabel] = useState(0);
+    const [selectedNodeId, setSelectedNodeId] = useState(null);
+    const [selectedEdgeId, setSelectedEdgeId] = useState(0);
+    const [sourceNode, setSourceNode] = useState(0);
+    const [targetNode, setTargetNode] = useState(0);
 
-    const handleCloseNodes = () => setShowNodes(false);
+    useEffect(() => {
+        if  (selectedNodeId) {
+            setNodeLabel(props.controllerPage.nodes[selectedNodeId].label);
+        }
+    }, [props.controllerPage.nodes, selectedNodeId]);
+
+    const handleCloseNodes = () => {setShowNodes(false);};
     const handleShowNodes = () => setShowNodes(true);
 
     const handleShowEdges = (n) => {
@@ -30,17 +41,16 @@ const Graphs = (props) => {
     };
 
     let newLabelElement = React.createRef();
-    let setLabel = () => { return  newLabelElement.current.value };
+   // let setLabel = () => { return  newLabelElement.current.value };
+    const setLabel = (e) => {
+        setNodeLabel(newLabelElement.current.value)
+    };
 
     let newFromElement = React.createRef();
-    let setFrom = () => { return  newFromElement.current.value };
+    let setFrom = () => { setSourceNode(newFromElement.current.value) };
 
     let newToElement = React.createRef();
-    let setTo = () => { return  newToElement.current.value };
-
-    let showLog = () => {
-        console.log(props.controllerPage)
-    };
+    let setTo = () => { setTargetNode(newToElement.current.value) };
 
     const myConfig = {
         nodeHighlightBehavior: true,
@@ -60,63 +70,59 @@ const Graphs = (props) => {
     };
 
     const onClickNode = (nodeId) => {
-        let selectedNodeId = nodeId - 1;
+        setSelectedNodeId(nodeId - 1);
+        setIdContainer(nodeId);
         handleShowNodes(true);
-        $("#IdElement").val(nodeId);
-        $("#labelElement").val(props.controllerPage.nodes[selectedNodeId].label);
-        $("#hiddeninp").val(selectedNodeId);
     };
 
     const onClickLink = (source, target) => {
         handleShowEdges(true);
-        $("#fromElement").val(source);
-        $("#toElement").val(target);
+        setSourceNode(source);
+        setTargetNode(target);
         let linksArray = props.controllerPage.links;
         let indexId = linksArray.findIndex(linksArray => linksArray.target == target && linksArray.source == source);
-        let selectedEdgeId = props.controllerPage.links[indexId].id;
-        $("#hiddeninp2").html(selectedEdgeId);
+        setSelectedEdgeId(props.controllerPage.links[indexId].id);
         props.nodeBuffer(source, target);
     };
 
 
-    let onUpdateNode = (e) => {
-        let nodeId = parseInt($("#hiddeninp").val()) + 1;
-        let nodeSetLabel = setLabel();
-        props.updateNodeOptions(nodeId, nodeSetLabel)
+    let onUpdateNode = () => {
+        let nodeId = selectedNodeId + 1;
+        handleCloseNodes();
+        props.updateNodeOptions(nodeId, nodeLabel)
     };
 
     let onUpdateEdge = (e) => {
-        let edgeId = parseInt($("#hiddeninp2").text());
-        let edgeSetTo = parseInt(setTo());
-        let edgeSetFrom = parseInt(setFrom());
+        let edgeId = selectedEdgeId;
+        let edgeSetTo = parseInt(targetNode);
+        let edgeSetFrom = parseInt(sourceNode);
         let linksArray = props.controllerPage.links;
         let indexEachOther = linksArray.findIndex(linksArray => linksArray.target === edgeSetFrom && linksArray.source === edgeSetTo && linksArray.id !== edgeId);
         let indexOneOutcomeLink = linksArray.findIndex(linksArray => linksArray.source === edgeSetFrom && linksArray.id !== edgeId);
         console.log(props.controllerPage.nodes.length);
         if  (edgeSetTo <= props.controllerPage.nodes.length && edgeSetFrom <= props.controllerPage.nodes.length) {
             if (props.controllerPage.links[indexEachOther]) {
-                alert("enter2");
                 alert("nodes should not point to each other");
                 edgeSetFrom = parseInt(props.controllerPage.nodeBuffer.source);
                 edgeSetTo = parseInt(props.controllerPage.nodeBuffer.target);
                 props.updateEdgesOptions(edgeId, edgeSetFrom, edgeSetTo)
             }
             else if (props.controllerPage.links[indexOneOutcomeLink]) {
-                alert("enter3");
                 alert("node should have only one outcome link");
                 edgeSetFrom = parseInt(props.controllerPage.nodeBuffer.source);
                 edgeSetTo = parseInt(props.controllerPage.nodeBuffer.target);
                 props.updateEdgesOptions(edgeId, edgeSetFrom, edgeSetTo)
             }
             else {
-                edgeSetTo = parseInt(setTo());
-                edgeSetFrom = parseInt(setFrom());
+                edgeSetTo = parseInt(targetNode);
+                edgeSetFrom = parseInt(sourceNode);
                 props.updateEdgesOptions(edgeId, edgeSetFrom, edgeSetTo)
             }
         }
         else {
             alert("this node dose not exist");
         }
+        handleCloseEdges();
     };
 
 
@@ -138,18 +144,17 @@ const Graphs = (props) => {
                             <Modal.Title>Handle this edge</Modal.Title>
                         </Modal.Header>
                         <Modal.Body>
-                            <p id="hiddeninp2" hidden>0</p>
                             <InputGroup.Prepend size="sm" className="mb-3">
                                 <InputGroup.Prepend>
                                     <InputGroup.Text id="inputGroup-sizing-lg">Set link source</InputGroup.Text>
                                 </InputGroup.Prepend>
-                                <input aria-label="Small" id="fromElement" ref={newFromElement} onChange={setFrom} aria-describedby={"inputGroup-sizing-sm"} />
+                                <input aria-label="Small" id="fromElement" ref={newFromElement} value={sourceNode} onChange={setFrom} aria-describedby={"inputGroup-sizing-sm"} />
                             </InputGroup.Prepend>
                             <InputGroup.Prepend size="sm" className="mb-3">
                             <InputGroup.Prepend>
                                 <InputGroup.Text id="inputGroup-sizing-lg">Set link target</InputGroup.Text>
                             </InputGroup.Prepend>
-                            <input aria-label="Small" id="toElement" ref={newToElement} onChange={setTo} aria-describedby={"inputGroup-sizing-sm"} />
+                            <input aria-label="Small" id="toElement" ref={newToElement} onChange={setTo}  value={targetNode} aria-describedby={"inputGroup-sizing-sm"} />
                             </InputGroup.Prepend>
                         </Modal.Body>
                         <Modal.Footer>
@@ -173,13 +178,13 @@ const Graphs = (props) => {
                         <InputGroup.Prepend>
                             <InputGroup.Text id="inputGroup-sizing-lg">Node Id</InputGroup.Text>
                         </InputGroup.Prepend>
-                        <FormControl aria-label="Small" id="IdElement" aria-describedby="inputGroup-sizing-sm" readOnly />
+                        <FormControl aria-label="Small" id="IdElement" value={idContainer} aria-describedby="inputGroup-sizing-sm" readOnly />
                     </InputGroup>
                     <InputGroup size="sm" className="mb-3">
                         <InputGroup.Prepend>
                             <InputGroup.Text id="inputGroup-sizing-lg" >Node Label</InputGroup.Text>
                         </InputGroup.Prepend>
-                        <FormControl aria-label="Small" id="labelElement" ref={newLabelElement} onChange={setLabel} aria-describedby="inputGroup-sizing-sm" />
+                        <FormControl aria-label="Small" id="labelElement" value={nodeLabel} ref={newLabelElement} onChange={setLabel} aria-describedby="inputGroup-sizing-sm" />
                     </InputGroup>
 
                 </Modal.Body>
